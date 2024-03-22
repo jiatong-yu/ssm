@@ -1,0 +1,90 @@
+classification:
+  select: false
+  task_names:
+    - AmazonCounterfactualClassification
+    - AmazonPolarityClassification
+    - AmazonReviewsClassification
+    - Banking77Classification
+    - EmotionClassification
+    - ImdbClassification
+    - MassiveIntentClassification
+    - MassiveScenarioClassification
+    - MTOPDomainClassification
+    - MTOPIntentClassification
+    - ToxicConversationsClassification
+    - TweetSentimentExtractionClassification
+
+clustering:
+  select: true
+  task_names:
+    - ArxivClusteringP2P
+    - ArxivClusteringS2S
+    - BiorxivClusteringP2P
+    - BiorxivClusteringS2S
+    - MedrxivClusteringP2P
+    - MedrxivClusteringS2S
+    - RedditClustering
+    - RedditClusteringP2P
+    - StackExchangeClustering
+    - StackExchangeClusteringP2P
+    - TwentyNewsgroupsClustering
+
+pair_classification:
+  select: false
+  task_names:
+    - SprintDuplicateQuestions
+    - TwitterSemEval2015
+    - TwitterURLCorpus
+
+reranking:
+  select: false
+  task_names:
+    - AskUbuntuDupQuestions
+    - MindSmallReranking
+    - SciDocsRR
+    - StackOverflowDupQuestions
+
+retrieval:
+  select: false
+  task_names:
+    # - ArguAna
+    # - ClimateFEVER
+    - CQADupstackAndroidRetrieval
+    # - CQADupstackEnglishclearRetrieval
+    # - CQADupstackGamingRetrieval
+    # - CQADupstackGisRetrieval
+    # - CQADupstackMathematicaRetrieval
+    # - CQADupstackPhysicsRetrieval
+    # - CQADupstackProgrammersRetrieval
+    # - CQADupstackStatsRetrieval
+    # - CQADupstackTexRetrieval
+    # - CQADupstackUnixRetrieval
+    # - CQADupstackWebmastersRetrieval
+    # - CQADupstackWordpressRetrieval
+    # - DBPedia
+    # - FEVER
+    # - FiQA2018
+    # - HotpotQA
+    # - MSMARCO
+    # - NFCorpus
+    # - NQ
+    # - QuoraRetrieval
+    # - SCIDOCS
+    # - SciFact
+    # - Touche2020
+    # - TRECCOVID
+
+sts:
+  select: false
+  task_names:
+    - BIOSSES
+    - SICK-R
+    - STS12
+    - STS13
+    - STS14
+    - STS15
+    - STS16
+    - STS17
+    - STS22
+    - STSBenchmark
+    - SummEval

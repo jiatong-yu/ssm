@@ -1,0 +1,17 @@
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+─────────────────────────────── Selected tasks  ────────────────────────────────
+Clustering
+    - ArxivClusteringP2P, p2p
+    - ArxivClusteringS2S, s2s
+    - BiorxivClusteringP2P, p2p
+    - BiorxivClusteringS2S, s2s
+    - MedrxivClusteringP2P, p2p
+    - MedrxivClusteringS2S, s2s
+    - RedditClustering, s2s
+    - RedditClusteringP2P, p2p
+    - StackExchangeClustering, s2s
+    - StackExchangeClusteringP2P, p2p
+    - TwentyNewsgroupsClustering, s2s
+
+
+Clustering:   0%|          | 0/31 [00:00<?, ?it/s]slurmstepd: error: *** JOB 55076236 ON della-l04g16 CANCELLED AT 2024-03-21T20:12:30 ***

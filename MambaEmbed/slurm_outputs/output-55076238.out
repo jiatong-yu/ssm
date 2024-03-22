@@ -1,0 +1,17 @@
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+─────────────────────────────── Selected tasks  ────────────────────────────────
+Clustering
+    - ArxivClusteringP2P, p2p
+    - ArxivClusteringS2S, s2s
+    - BiorxivClusteringP2P, p2p
+    - BiorxivClusteringS2S, s2s
+    - MedrxivClusteringP2P, p2p
+    - MedrxivClusteringS2S, s2s
+    - RedditClustering, s2s
+    - RedditClusteringP2P, p2p
+    - StackExchangeClustering, s2s
+    - StackExchangeClusteringP2P, p2p
+    - TwentyNewsgroupsClustering, s2s
+
+
+Clustering:   0%|          | 0/31 [00:00<?, ?it/s]Clustering:   3%|▎         | 1/31 [24:26<12:13:18, 1466.63s/it]Clustering:   6%|▋         | 2/31 [48:53<11:48:50, 1466.58s/it]Clustering:  10%|▉         | 3/31 [1:12:54<11:19:06, 1455.22s/it]Clustering:  13%|█▎        | 4/31 [1:36:34<10:48:31, 1441.15s/it]Clustering:  16%|█▌        | 5/31 [2:00:07<10:20:10, 1431.18s/it]Clustering:  19%|█▉        | 6/31 [2:23:37<9:53:17, 1423.90s/it] Clustering:  23%|██▎       | 7/31 [2:47:10<9:28:04, 1420.17s/it]Clustering:  26%|██▌       | 8/31 [3:10:42<9:03:27, 1417.73s/it]Clustering:  29%|██▉       | 9/31 [3:34:13<8:38:59, 1415.45s/it]Clustering:  32%|███▏      | 10/31 [3:57:43<8:14:51, 1413.88s/it]Clustering:  35%|███▌      | 11/31 [4:22:37<7:59:30, 1438.54s/it]Clustering:  39%|███▊      | 12/31 [4:47:31<7:40:51, 1455.34s/it]Clustering:  42%|████▏     | 13/31 [5:12:26<7:20:09, 1467.22s/it]Clustering:  45%|████▌     | 14/31 [5:37:23<6:58:16, 1476.25s/it]Clustering:  48%|████▊     | 15/31 [6:02:11<6:34:39, 1479.96s/it]Clustering:  52%|█████▏    | 16/31 [6:27:08<6:11:12, 1484.83s/it]Clustering:  55%|█████▍    | 17/31 [6:52:00<5:46:57, 1486.97s/it]Clustering:  58%|█████▊    | 18/31 [7:16:48<5:22:15, 1487.36s/it]Clustering:  61%|██████▏   | 19/31 [7:41:49<4:58:18, 1491.51s/it]Clustering:  65%|██████▍   | 20/31 [8:06:42<4:33:31, 1491.99s/it]Clustering:  68%|██████▊   | 21/31 [8:31:38<4:08:50, 1493.01s/it]Clustering:  71%|███████   | 22/31 [8:35:12<2:46:23, 1109.23s/it]Clustering:  74%|███████▍  | 23/31 [8:58:43<2:39:58, 1199.81s/it]Clustering:  77%|███████▋  | 24/31 [9:20:47<2:24:20, 1237.26s/it]Clustering:  81%|████████  | 25/31 [9:43:12<2:06:56, 1269.47s/it]Clustering:  84%|████████▍ | 26/31 [9:51:46<1:26:54, 1042.88s/it]slurmstepd: error: *** JOB 55076238 ON della-l04g16 CANCELLED AT 2024-03-22T06:18:18 DUE TO TIME LIMIT ***

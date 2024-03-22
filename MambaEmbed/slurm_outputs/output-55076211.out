@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/scratch/gpfs/jiatongy/mamba/MambaEmbed/mteb_eval.py", line 11, in <module>
+    from mamba_ssm.models.config_mamba import MambaConfig
+ModuleNotFoundError: No module named 'mamba_ssm'

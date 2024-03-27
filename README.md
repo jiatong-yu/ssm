@@ -10,7 +10,7 @@ We modify the [hagrid](https://huggingface.co/datasets/miracl/hagrid) dataset. I
 The dataset contains 1324 instances. Each instance has at most 3 gold documents and an average of 1.61 gold documents. Each instance has a total of 15 docs
 Random has precision = 0.1, pass@5 = 0.22, pass@10 = 0.53.   
 Baseline has precision = 0.96, pass@5 = 0.994, pass@10 = 0.996 
-| Model Name | Precision | pass@5 | pass@10  
+| Model Name | Precision | pass@5 | pass@10 |
 |----------|----------|----------|  
 | random | 0.1 | 0.22 | 0.53 |  
 | mambaEmbed | **0.96** | **0.994** | **0.996**|  

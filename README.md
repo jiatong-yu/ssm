@@ -17,6 +17,7 @@ Baseline has precision = 0.96, pass@5 = 0.994, pass@10 = 0.996
 |ours | 0.96 | 0.994|0.996|  
 |m2-bert-80M-8k-retrieval | 0.74 | 0.913 | 0.996|  
 |mistral-embed | 1.0 | 1.0 | 1.0|  
+|voyage-2| 1.0 | 1.0 | 1.0|
 
    
 

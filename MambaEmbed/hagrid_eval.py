@@ -6,12 +6,28 @@ import argparse
 import torch
 import datasets
 from tqdm import tqdm
+import time 
 
 from math import comb
 from transformers import AutoTokenizer
+import threading
+import together
+import voyageai
+
+from mistralai.client import MistralClient
+
 
 from mamba_ssm.models.config_mamba import MambaConfig
 from model import MambaEmbedModel
+
+SAVE_EMBEDDING = True
+
+together_client = together.Together()
+together.api_key = "YOUR API KEY"
+mistral_client = MistralClient(api_key="YOUR API KEY")
+voyage_client = voyageai.Client(api_key="YOUR API KEY")
+
+
 
 def _cos_sim(a, b):
     """
@@ -115,7 +131,7 @@ def _compute_random_baseline(N):
     
 
 def _create_hagrid_dataset(N = 15,
-                          output_path = "hagrid_dataset.json",
+                          dataset_path = "hagrid_dataset.json",
                           ):
     if N <= 10:
         raise ValueError("N should be greater than 10, since we use pass@10 score.")
@@ -137,19 +153,130 @@ def _create_hagrid_dataset(N = 15,
                                             neg_docs, 
                                             neg_docs_docids)
         dataset.append(data_inst)
-    with open(output_path,"w") as f: 
+    with open(dataset_path,"w") as f: 
         json.dump(dataset, f, indent=4)
     return 
 
-def _evaluate_instance(model, inst):
-    query_embedding = model.encode(inst['query'])[0]
-    results = []
-    for doc in inst['docs']:
-        emb = model.encode(doc['text'])[0]
+def _generate_together_embedding(client, sents, model_api = "togethercomputer/m2-bert-80M-8k-retrieval"): 
+    if isinstance(sents, str):
+        sents_list = [sents]
+    else:
+        sents_list = sents
+    out = client.embeddings.create(
+        input = sents_list,
+        model = model_api
+    )
+    time.sleep(1)
+    if isinstance(sents, str):
+        return torch.tensor(out.data[0].embedding)
+    
+    emb_list = []
+    for i in range(len(sents_list)):
+        emb_list.append(
+            torch.tensor(out.data[i].embedding)
+        )
+    return emb_list
 
-        score = _cos_sim(query_embedding, emb)
-        docid = doc['docid']
-        results.append((score, docid))
+def _generate_mistral_embedding(client, sents,):
+    if isinstance(sents, str):
+        sents_list = [sents]
+    else:
+        sents_list = sents
+    out = client.embeddings(
+        input = sents_list,
+        model = "mistral-embed"
+    )
+    time.sleep(1)
+    if isinstance(sents, str):
+        return torch.tensor(out.data[0].embedding)
+    emb_list = []
+    for i in range(len(sents_list)):
+        emb_list.append(
+            torch.tensor(out.data[i].embedding)
+        )
+    return emb_list
+
+def _generate_voyage_embedding(client, sents):
+    if isinstance(sents, str):
+        sents_list = [sents]
+    else:
+        sents_list = sents
+    out = client.embed(
+        sents_list,
+        model = "voyage-2"
+    )
+    time.sleep(1)
+    if isinstance(sents, str):
+        return torch.tensor(out.embeddings[0])
+    emb_list = []
+    for i in range(len(sents_list)):
+        emb_list.append(
+            torch.tensor(out.embeddings[i])
+        )
+    return emb_list
+
+def _evaluate_instance(args, model, inst, layer_idx=-5):
+    if args.model == "MambaEmbed":
+        query_embedding = model.encode(inst['query'], layer_idx=layer_idx)[0]
+        results = []
+        if SAVE_EMBEDDING:
+            doc_embeddings = []
+        for doc in inst['docs']:
+            if args.model == "MambaEmbed":
+                emb = model.encode(doc['text'], layer_idx = layer_idx)[0]
+
+            score = _cos_sim(query_embedding, emb)
+            docid = doc['docid']
+            results.append((score, docid))
+            if SAVE_EMBEDDING:
+                doc_embeddings.append({
+                    "doc": doc['text'],
+                    "embedding": emb.tolist(),
+                    "docid": docid,
+                })
+        if SAVE_EMBEDDING:
+            emb_inst = {
+                "query": inst['query'],
+                "query_embedding": query_embedding.tolist(),
+                "docs": doc_embeddings,
+            }
+            if os.path.exists("hagrid_embedding.json"):
+                with open("hagrid_embedding.json","r") as f:
+                    data = json.load(f)
+            else:
+                data = []
+            data.append(emb_inst)
+            with open("hagrid_embedding.json", "w") as f:
+                json.dump(data, f, indent=4)
+
+    
+    elif args.model == "together":
+        query_embedding = _generate_together_embedding(together_client, inst['query'])
+        doc_embeddings = _generate_together_embedding(together_client, [doc['text'] for doc in inst['docs']])
+        results = []
+        for emb, doc in zip(doc_embeddings, inst['docs']):
+            score = _cos_sim(query_embedding, emb)
+            docid = doc['docid']
+            results.append((score, docid))
+        
+    elif args.model == "mistral":
+        query_embedding = _generate_mistral_embedding(mistral_client, inst['query'])
+        doc_embeddings = _generate_mistral_embedding(mistral_client, [doc['text'] for doc in inst['docs']])
+        results = []
+        for emb, doc in zip(doc_embeddings, inst['docs']):
+            score = _cos_sim(query_embedding, emb)
+            docid = doc['docid']
+            results.append((score, docid))
+
+    elif args.model == "voyage":
+        query_embedding = _generate_voyage_embedding(voyage_client, inst['query'])
+        doc_embeddings = _generate_voyage_embedding(voyage_client, [doc['text'] for doc in inst['docs']])
+        results = []
+        for emb, doc in zip(doc_embeddings, inst['docs']):
+            score = _cos_sim(query_embedding, emb)
+            docid = doc['docid']
+            results.append((score, docid))
+
     results = sorted(results, key=lambda x: x[0], reverse=True)
     """
     Precision score. 
@@ -179,42 +306,70 @@ def _evaluate_instance(model, inst):
     
 
 def evaluate(args):
-    with open(args.output_path, "r") as f:
+    if SAVE_EMBEDDING:
+        print("warning: saving embeddings. this could be significant in memory usage and slow down the evaluation process. please make sure the dataset size is small.")
+    with open(args.dataset_path, "r") as f:
         dataset = json.load(f)
     if not isinstance(dataset, list):
         raise ValueError("Dataset should be a list of dictionaries, with fields 'query', 'docs', and 'golds'")
     
-    dataset = dataset[:500]
-    model = MambaEmbedModel.from_pretrained("state-spaces/mamba-2.8b", 
-                                            device="cuda",
-                                            dtype=torch.float16)
-    model.eval()
+    dataset = dataset[:10]
+    if args.model == "MambaEmbed":
+        model = MambaEmbedModel.from_pretrained("state-spaces/mamba-2.8b", 
+                                                device="cuda",
+                                                dtype=torch.float16)
+        model.eval()
+    else:
+        model = None 
+
     precision_scores = []
     pass_5_scores = []
     pass_10_scores = []
     for inst in tqdm(dataset):
-        precision, pass_5, pass_10 = _evaluate_instance(model, inst)
+        precision, pass_5, pass_10 = _evaluate_instance(args, model, inst, args.layer_idx)
         precision_scores.append(precision)
         pass_5_scores.append(pass_5)
         pass_10_scores.append(pass_10)
     print("Precision: ", sum(precision_scores) / len(precision_scores))
     print("Pass@5: ", sum(pass_5_scores) / len(pass_5_scores))
     print("Pass@10: ", sum(pass_10_scores) / len(pass_10_scores))
+    res = {
+        "layer_idx": args.layer_idx,
+        "Precision": sum(precision_scores) / len(precision_scores),
+        "Pass@5": sum(pass_5_scores) / len(pass_5_scores),
+        "Pass@10": sum(pass_10_scores) / len(pass_10_scores),
+    }
+    # lock = threading.Lock()
+    # with lock:
+    output_path = args.output_path+"_"+args.model+".json"
+    if os.path.exists(output_path):
+        with open(output_path, "r") as f:
+            data = json.load(f)
+    else: 
+        data = []
+    data.append(res)
+    with open(output_path, "w") as f:
+        json.dump(data, f, indent=4)
 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--N", type=int, default=15)
-    parser.add_argument("--output_path", type=str, default="hagrid_dataset.json")
+    parser.add_argument("--dataset_path", type=str, default="hagrid_dataset.json")
+    parser.add_argument("--output_path", type=str, default="hagrid_eval")
     parser.add_argument("--random_baseline", default=False, action="store_true")
+    parser.add_argument("--model", type=str, default="MambaEmbed", choices=["MambaEmbed", "together", "mistral", "voyage"])
+    parser.add_argument("--layer_idx", type=int, default=-8)
     args = parser.parse_args()
 
-    if not os.path.exists(args.output_path):
-        _create_hagrid_dataset(N=args.N, output_path=args.output_path)
-        print("created hagrid dataset at ", args.output_path,". Please run the script again to evaluate.")
+    if not os.path.exists(args.dataset_path):
+        _create_hagrid_dataset(N=args.N, dataset_path=args.dataset_path)
+        print("created hagrid dataset at ", args.dataset_path,". Please run the script again to evaluate.")
+    
     
     elif args.random_baseline:
         _compute_random_baseline(args.N)
+
     else: 
         evaluate(args)

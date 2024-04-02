@@ -19,8 +19,13 @@ from modeling_hyena import StripedHyenaModelForCausalLM
 
 from mistralai.client import MistralClient
 
+def _cos_sim(a,b):
+    p = torch.real(torch.vdot(a,b))
+    norm = torch.linalg.norm(a) * torch.linalg.norm(b)
+    return p/norm
 
-
+EMBED_LAYER_IDX = -10
+DATASIZE = 500
 
 SAVE_EMBEDDING = False
 
@@ -29,29 +34,6 @@ together.api_key = "YOUR API KEY"
 mistral_client = MistralClient(api_key="YOUR API KEY")
 voyage_client = voyageai.Client(api_key="YOUR API KEY")
 
-
-
-def _cos_sim(a, b):
-    """
-    Computes the cosine similarity cos_sim(a[i], b[j]) for all i and j.
-    :return: Matrix with res[i][j]  = cos_sim(a[i], b[j])
-    source: https://github.com/embeddings-benchmark/mteb
-    """
-    if not isinstance(a, torch.Tensor):
-        a = torch.tensor(a)
-
-    if not isinstance(b, torch.Tensor):
-        b = torch.tensor(b)
-
-    if len(a.shape) == 1:
-        a = a.unsqueeze(0)
-
-    if len(b.shape) == 1:
-        b = b.unsqueeze(0)
-
-    a_norm = torch.nn.functional.normalize(a, p=2, dim=1)
-    b_norm = torch.nn.functional.normalize(b, p=2, dim=1)
-    return torch.mm(a_norm, b_norm.transpose(0, 1))
 
 def _process_pos_instance(inst, max_docs=3):
     pos_docs_idxs = []
@@ -221,7 +203,7 @@ def _evaluate_instance(args, model, inst):
     if SAVE_EMBEDDING:
         doc_embeddings = []
     for doc in inst['docs']:
-        if args.model == "HyenaEmbed":
+        if args.model == "hyena":
             emb = model.encode(doc['text'])[0]
 
         score = _cos_sim(query_embedding, emb)
@@ -284,8 +266,8 @@ def evaluate(args):
     if not isinstance(dataset, list):
         raise ValueError("Dataset should be a list of dictionaries, with fields 'query', 'docs', and 'golds'")
     
-    dataset = dataset[:30]
-    if args.model == "HyenaEmbed":
+    dataset = dataset[:DATASIZE]
+    if args.model == "hyena":
         model_name = "togethercomputer/StripedHyena-Hessian-7B"
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
         config.use_cache = True
@@ -297,6 +279,7 @@ def evaluate(args):
     precision_scores = []
     pass_5_scores = []
     pass_10_scores = []
+    print("Evaluating...")
     for inst in tqdm(dataset):
         precision, pass_5, pass_10 = _evaluate_instance(args, model, inst)
         precision_scores.append(precision)
@@ -306,7 +289,9 @@ def evaluate(args):
     print("Pass@5: ", sum(pass_5_scores) / len(pass_5_scores))
     print("Pass@10: ", sum(pass_10_scores) / len(pass_10_scores))
     res = {
-        # "layer_idx": args.layer_idx,
+        "dataset size": DATASIZE,
+        "method": "fir_state",
+        "layer_idx": EMBED_LAYER_IDX,
         "Precision": sum(precision_scores) / len(precision_scores),
         "Pass@5": sum(pass_5_scores) / len(pass_5_scores),
         "Pass@10": sum(pass_10_scores) / len(pass_10_scores),
@@ -331,7 +316,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_path", type=str, default="hagrid_dataset.json")
     parser.add_argument("--output_path", type=str, default="hagrid_eval")
     parser.add_argument("--random_baseline", default=False, action="store_true")
-    parser.add_argument("--model", type=str, default="HyenaEmbed", choices=["HyenaEmbed", "together", "mistral", "voyage"])
+    parser.add_argument("--model", type=str, default="hyena", choices=["hyena", "together", "mistral", "voyage"])
     args = parser.parse_args()
 
     if not os.path.exists(args.dataset_path):

@@ -25,6 +25,7 @@ except ImportError:
 
 import time 
 
+EMBED_LAYER_IDX = -8
 
 class AttentionBlock(nn.Module):
     def __init__(self, config, layer_idx) -> None:
@@ -158,17 +159,9 @@ class ParallelHyenaFilter(nn.Module):
             # almost always parallel forward?
             y, inference_params =  self.parallel_forward(u, inference_params, padding_mask)
         iir_state = None
-        """
-        Current implememtation: flat the complex number array, distill real and imaginary parts, further concat. 
-        Could try adding them??
-        """
         if self.return_iir_state:
-            c_state = inference_params.state_dict[self.layer_idx].cpu().detach().numpy()
-            img_state = np.imag(c_state).reshape(-1)
-            real_state = np.real(c_state).reshape(-1)
-            iir_state = np.empty(len(img_state) + len(real_state), dtype=real_state.dtype)
-            iir_state[0::2] = real_state
-            iir_state[1::2] = img_state
+            iir_state = inference_params.fir_state_dict[self.layer_idx].cpu().detach().reshape(-1)
+            # iir_state = inference_params.state_dict[self.layer_idx].cpu().detach().reshape(-1)
 
 
 
@@ -350,7 +343,7 @@ class StripedHyena(nn.Module):
         self.norm = RMSNorm(config) if config.get("final_norm", True) else None
         self.unembed = self.emb if config.tie_embeddings else VocabParallelEmbedding(config)
         self.gradient_checkpointing = False
-        self.embed_layer_idx = config.get("embed_layer_idx", -2)
+        self.embed_layer_idx = config.get("embed_layer_idx", EMBED_LAYER_IDX)
         
         if config.get("use_flashfft", "False"):
             raise NotImplementedError("Please use standalone SH code for other custom kernels")
@@ -389,6 +382,8 @@ class StripedHyena(nn.Module):
             block_name = "mha" if block_idx in self.config.attn_layer_idxs else "hyena"
             inference_params = inference_params_dict[block_name]
             x, _, iir_state = block(x, inference_params=inference_params)
+            # if block.return_iir_state and block_name == "mha":
+            #     raise ValueError("state vector should not be returned for MHA blocks")
             if block_name == "hyena" and block.return_iir_state: 
                 iir_state_embedding = iir_state
         return x, inference_params_dict, iir_state_embedding
@@ -412,7 +407,7 @@ class StripedHyena(nn.Module):
         return x, None
 
     def initialize_inference_params(self):
-        print_rank_0("Initializing inference params...")
+        # print_rank_0("Initializing inference params...")
         inference_params_dict = {
             "mha": InferenceParams(
                 max_seqlen=self.config.get("max_seqlen", 8192),

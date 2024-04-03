@@ -18,6 +18,9 @@ We modify the [hagrid](https://huggingface.co/datasets/miracl/hagrid) dataset. I
 
 `*` indicate state vector embed models.
 
-### Merging State Vector for Faster Inference  
+### Decomposing Performance by Tasks
+|Task Name | mamba-2.8b | stripedhyena-7b|
+|---|---|---|
+|contain | 0.6623 | 0.4535|
 
 

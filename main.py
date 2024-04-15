@@ -124,12 +124,70 @@ def semantic_difference(args, subset="bias", name="name_birthplace",layer_idx=55
     print(f"together: {together_sim / len(samples)}")
     print(f"voyage: {voyage_sim / len(samples)}")
 
+def structure_query(args, layer_idx=55):
+    """
+    I'm too sleepy to make this function efficient XD
+    """
+    dataset = json.load(open("structure_query.json","r"))
+    if not args.api:
+        model = SSMModel("mamba")
+    together_neg = 0
+    voyage_neg = 0
+    model_neg = 0
+    together_doc = 0
+    voyage_doc = 0
+    model_doc = 0
+    for data in dataset:
+        q = data["query"]
+        if args.api:
+            enc_q = together_encode(together_client, q)
+            doc_sim = 0
+            neg_sim = 0
+            for doc in data["docs"]:
+                enc_doc = together_encode(together_client, doc['text'])
+                doc_sim += _cos_sim(enc_q, enc_doc)
 
+            for neg in data["query_negs"]:
+                enc_neg = together_encode(together_client, neg)
+                neg_sim += _cos_sim(enc_q, enc_neg)
+            together_neg += neg_sim / len(data["query_negs"])
+            together_doc += doc_sim / len(data["docs"])
+            doc_sim = 0
+            neg_sim = 0
+            enc_q = voyage_encode(voyage_client, q)
+            for doc in data["docs"]:
+                enc_doc = voyage_encode(voyage_client, doc['text'])
+                doc_sim += _cos_sim(enc_q, enc_doc)
+            for neg in data["query_negs"]:
+                enc_neg = voyage_encode(voyage_client, neg)
+                neg_sim += _cos_sim(enc_q, enc_neg)
+            voyage_neg += neg_sim / len(data["query_negs"])
+            voyage_doc += doc_sim / len(data["docs"])
+        else: 
+            enc_q = model.encode(q, ssm_layer_idx=layer_idx).reshape(-1)
+            doc_sim = 0
+            neg_sim = 0
+            for doc in data["docs"]:
+                enc_doc = model.encode(doc['text'], ssm_layer_idx=layer_idx).reshape(-1)
+                doc_sim += _cos_sim(enc_q, enc_doc)
+            for neg in data["query_negs"]:
+                enc_neg = model.encode(neg, ssm_layer_idx=layer_idx).reshape(-1)
+                neg_sim += _cos_sim(enc_q, enc_neg)
+            model_neg += neg_sim / len(data["query_negs"])
+            model_doc += doc_sim / len(data["docs"])
+    print(f"model doc: {model_doc / len(dataset)}")
+    print(f"model neg: {model_neg / len(dataset)}")
+    print(f"together doc: {together_doc / len(dataset)}")
+    print(f"together neg: {together_neg / len(dataset)}")
+    print(f"voyage doc: {voyage_doc / len(dataset)}")
+    print(f"voyage neg: {voyage_neg / len(dataset)}")
 
 
     
 if __name__=="__main__":
     args = argparse.ArgumentParser()
     args.add_argument("--api",action="store_true",help="use api to encode")
+    args.add_argument("--task","-t", type=str, choices=["semantic","structure", "trace"], default="structure")
     args = args.parse_args()
-    semantic_difference(args)
+    # semantic_difference(args)
+    structure_query(args)
